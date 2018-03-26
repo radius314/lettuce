@@ -23,34 +23,51 @@ if ($target_conn->connect_error) {
 }
 echo "Target database connection established.\n";
 
-### service bodies
-$max_service_body_bigint = 0;
-$sql = "SELECT id_bigint FROM " . $target_table_prefix . "comdef_service_bodies ORDER BY id_bigint DESC LIMIT 1";
-$result = $target_conn->query($sql);
-while($row = $result->fetch_assoc()) {
-    $max_service_body_bigint = $row["id_bigint"];
-}
-
-echo "max big int: " . $max_service_body_bigint . "\n\n";
-
-$sql = "SELECT * FROM " . $source_table_prefix . "comdef_service_bodies";
-$result = $source_conn->query($sql);
+### users
+$table_suffix = 'users';
+$users_max_id = getTargetMaxId($table_suffix,'id_bigint');
+$result = getAllSourceData($table_suffix);
 
 if ($result->num_rows > 0) {
     // output data of each row
     while($r = $result->fetch_assoc()) {
-        $insert_sql = "INSERT INTO " . $target_table_prefix . "comdef_service_bodies VALUES (" .
-                      ($r["id_bigint"] + $max_service_body_bigint) . "," .
+        $insert_sql = "INSERT INTO " . $target_table_prefix . "comdef_" . $table_suffix . " VALUES (" .
+                      ($r["id_bigint"] + $users_max_id) . "," .
+                      $r["user_level_tinyint"] . "," .
+                      "'" . $r["name_string"] . "'," .
+                      "'" . $r["description_string"] . "'," .
+                      "'" . $r["email_address_string"] . "'," .
+                      "'" . $r["login_string"] . "'," .
+                      "'" . $r["password_string"] . "'," .
+                      "'" . $r["last_access_datetime"] . "'," .
+                      "'" . $r["lang_enum"] . "')";
+        $insert_result = $target_conn->query($insert_sql);
+        error_log($insert_result);
+    }
+} else {
+    echo "0 results";
+}
+
+### service bodies
+$table_suffix = 'service_bodies';
+$service_bodies_max_id = getTargetMaxId($table_suffix, 'id_bigint');
+$result = getAllSourceData($table_suffix);
+
+if ($result->num_rows > 0) {
+    // output data of each row
+    while($r = $result->fetch_assoc()) {
+        $insert_sql = "INSERT INTO " . $target_table_prefix . "comdef_" . $table_suffix . " VALUES (" .
+                      ($r["id_bigint"] + $service_bodies_max_id) . "," .
                       "'" . $r["name_string"] . "'," .
                       "'" . $r["description_string"] . "'," .
                       "'" . $r["lang_enum"] . "'," .
                       "'" . $r["worldid_mixed"] . "'," .
                       "'" . $r["kml_file_uri_string"] . "'," .
-                      $r["principal_user_bigint"] . "," .
+                      ($r["principal_user_bigint"] + $users_max_id) . "," .
                       "'" . $r["editors_string"] . "'," .
                       "'" . $r["uri_string"] . "'," .
                       "'" . $r["sb_type"] . "'," .
-                      ($r["sb_owner"] + $max_service_body_bigint) . "," .
+                      ($r["sb_owner"] + $service_bodies_max_id) . "," .
                       $r["sb_owner_2"] . "," .
                       "'" . $r["sb_meeting_email"] . "')";
         $insert_result = $target_conn->query($insert_sql);
@@ -59,5 +76,61 @@ if ($result->num_rows > 0) {
 } else {
     echo "0 results";
 }
+
+### meetings
+$table_suffix = 'meetings_main';
+$meetings_main_max_id = getTargetMaxId($table_suffix, 'id_bigint');
+$result = getAllSourceData($table_suffix);
+
+if ($result->num_rows > 0) {
+    // output data of each row
+    while($r = $result->fetch_assoc()) {
+        $insert_sql = "INSERT INTO " . $target_table_prefix . "comdef_" . $table_suffix . " VALUES (" .
+                      ($r["id_bigint"] + $meetings_main_max_id) . "," .
+                      "'" . $r["worldid_mixed"] . "'," .
+                      "NULL," .
+                      ($r["service_body_bigint"] + $service_bodies_max_id) . "," .
+                      $r["weekday_tinyint"] . "," .
+                      "'" . $r["start_time"] . "'," .
+                      "'" . $r["duration_time"] . "'," .
+                      "'" . $r["formats"] . "'," .
+                      "'" . $r["lang_enum"] . "'," .
+                      $r["longitude"] . "," .
+                      $r["latitude"] . "," .
+                      $r["published"] . "," .
+                      "'" . $r["email_contact"] . "')";
+        $insert_result = $target_conn->query($insert_sql);
+        error_log($insert_result);
+    }
+} else {
+    echo "0 results";
+}
+
 $source_conn->close();
 $target_conn->close();
+
+
+function getTargetMaxId($table_suffix, $id_field) {
+    $max_id = 0;
+    $result = $GLOBALS['target_conn']->query("SELECT " . $id_field . " FROM " . $GLOBALS['target_table_prefix']
+                                             . "comdef_" . $table_suffix . " ORDER BY " . $id_field . " DESC LIMIT 1");
+    while($row = $result->fetch_assoc()) {
+        $max_id = $row[$id_field];
+    }
+
+    echo "max big int: " . $max_id . "\n\n";
+    return $max_id;
+}
+
+function getAllSourceData($table_suffix) {
+    return $GLOBALS['source_conn']->query("SELECT * FROM " . $GLOBALS['source_table_prefix'] . "comdef_" . $table_suffix);
+}
+
+function createMergeTable($table_suffix) {
+    $GLOBALS['source_conn']->query("CREATE TABLE lettuce_merge_" . $table_suffix . " (`old_id bigint`, `new_id bigint`)");
+}
+
+function mergeTableInsert($table_suffix, $old_id, $new_id) {
+    $merge_insert = "INSERT INTO lettuce_merge_" . $table_suffix . "(" . $old_id . "," . $new_id . ")";
+    $GLOBALS['source_conn']->query($merge_insert);
+}
