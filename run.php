@@ -106,6 +106,28 @@ if ($result->num_rows > 0) {
     echo "0 results";
 }
 
+###meetings data
+$table_suffix = 'meetings_data';
+$result = getAllSourceData($table_suffix);
+
+if ($result->num_rows > 0) {
+    // output data of each row
+    while($r = $result->fetch_assoc()) {
+        $insert_sql = "INSERT INTO " . $target_table_prefix . "comdef_" . $table_suffix . " VALUES (" .
+                      ($r["meetingid_bigint"] + $meetings_main_max_id) . "," .
+                      "'" . $r["key"] . "'," .
+                      "'" . $r["field_prompt"] . "'," .
+                      "'" . $r["lang_enum"] . "'," .
+                      $r["visibility"] . "," .
+                      "'" . $r["data_string"] . "'," .
+                      "NULL,NULL)";
+        $insert_result = $target_conn->query($insert_sql);
+        error_log($insert_result);
+    }
+} else {
+    echo "0 results";
+}
+
 $source_conn->close();
 $target_conn->close();
 
