@@ -1,6 +1,12 @@
 version: '2'
 
 services:
+  bmlt:
+    image: radius314/bmlt:latest
+    ports:
+      - "8080:80"
+    depends_on:
+      - db
   db:
     image: mariadb:10.1.21
     ports:
