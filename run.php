@@ -6,6 +6,8 @@ include 'clean.php';
 $table_suffix = 'users';
 $users_max_id = getTargetMaxId($table_suffix,'id_bigint');
 $result = getAllSourceData($table_suffix);
+$source_count = getSourceTableCounts($table_suffix);
+$target_count = getTargetTableCounts($table_suffix);
 
 if ($result->num_rows > 0) {
     // output data of each row
@@ -26,10 +28,19 @@ if ($result->num_rows > 0) {
     echo "0 results";
 }
 
+$final_count = getTargetTableCounts($table_suffix);
+if ($final_count == ($source_count + $target_count)) {
+    error_log($table_suffix . ' table all imported.');
+} else {
+    error_log($table_suffix . ' table rows missing (1 missing is ok typically because an admin user might have a duplicate name): ' . strval(($source_count + $target_count) - $final_count));
+}
+
 ### service bodies
 $table_suffix = 'service_bodies';
 $service_bodies_max_id = getTargetMaxId($table_suffix, 'id_bigint');
 $result = getAllSourceData($table_suffix);
+$source_count = getSourceTableCounts($table_suffix);
+$target_count = getTargetTableCounts($table_suffix);
 
 if ($result->num_rows > 0) {
     // output data of each row
@@ -54,12 +65,21 @@ if ($result->num_rows > 0) {
     echo "0 results";
 }
 
+$final_count = getTargetTableCounts($table_suffix);
+if ($final_count == ($source_count + $target_count)) {
+    error_log($table_suffix . ' table all imported.');
+} else {
+    error_log($table_suffix . ' table rows missing: ' . strval(($source_count + $target_count) - $final_count));
+}
+
 ###formats
 $table_suffix = 'formats';
 resetMergeTable($table_suffix);
 $formats_max_id = getTargetMaxId($table_suffix, 'shared_id_bigint');
 $source_formats = getAllSourceData($table_suffix);
 $target_formats = getAllTargetData($table_suffix);
+$source_count = getSourceTableCounts($table_suffix);
+$target_count = getTargetTableCounts($table_suffix);
 createMergeTable($table_suffix);
 
 if ($source_formats->num_rows > 0) {
@@ -94,6 +114,8 @@ if ($source_formats->num_rows > 0) {
 $table_suffix = 'meetings_main';
 $meetings_main_max_id = getTargetMaxId($table_suffix, 'id_bigint');
 $results = getAllSourceData($table_suffix);
+$source_count = getSourceTableCounts($table_suffix);
+$target_count = getTargetTableCounts($table_suffix);
 
 if ($results->num_rows > 0) {
     // output data of each row
@@ -119,9 +141,18 @@ if ($results->num_rows > 0) {
     echo "0 results";
 }
 
+$final_count = getTargetTableCounts($table_suffix);
+if ($final_count == ($source_count + $target_count)) {
+    error_log($table_suffix . ' table all imported.');
+} else {
+    error_log($table_suffix . ' table rows missing: ' . strval(($source_count + $target_count) - $final_count));
+}
+
 ###meetings data
 $table_suffix = 'meetings_data';
 $result = getAllSourceData($table_suffix);
+$source_count = getSourceTableCounts($table_suffix);
+$target_count = getTargetTableCounts($table_suffix);
 
 if ($result->num_rows > 0) {
     // output data of each row
@@ -138,4 +169,19 @@ if ($result->num_rows > 0) {
     }
 } else {
     echo "0 results";
+}
+
+$final_count = getTargetTableCounts($table_suffix);
+if ($final_count == ($source_count + $target_count)) {
+    error_log($table_suffix . ' table all imported.');
+} else {
+    error_log($table_suffix . ' table rows missing: ' . strval(($source_count + $target_count) - $final_count));
+}
+
+###data checks
+$server_admin_count = executeTargetScalarValue('SELECT count(id_bigint) as admin_counts FROM ' . $target_table_prefix . 'comdef_users WHERE user_level_tinyint = 1;');
+if ($server_admin_count->admin_counts > 1) {
+    error_log("Too many (" . $server_admin_count->admin_counts . ") server admin accounts.  You should delete one: SELECT * FROM " . $target_table_prefix . 'comdef_users WHERE user_level_tinyint = 1;');
+} else {
+    error_log("Server Admins check is good.");
 }

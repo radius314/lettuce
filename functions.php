@@ -65,6 +65,32 @@ function insertIntoMergeTable($table_suffix, $old_id, $new_id, $notes) {
     executeSourceDbQuery($merge_insert);
 }
 
+function executeSourceScalarValue($query) {
+    $result = executeSourceDbQuery($query);
+    if ($result !== false) {
+        return mysqli_fetch_object($result);
+    }
+
+    return null;
+}
+
+function getSourceTableCounts($table_suffix) {
+    return intval(executeSourceScalarValue('SELECT count(*) AS count_size FROM ' . $GLOBALS['source_table_prefix'] . 'comdef_' . $table_suffix)->count_size);
+}
+
+function getTargetTableCounts($table_suffix) {
+    return intval(executeTargetScalarValue('SELECT count(*) AS count_size FROM ' . $GLOBALS['source_table_prefix'] . 'comdef_' . $table_suffix)->count_size);
+}
+
+function executeTargetScalarValue($query) {
+    $result = executeTargetDbQuery($query);
+    if ($result !== false) {
+         return mysqli_fetch_object($result);
+    }
+
+    return null;
+}
+
 function executeSourceDbQuery($query) {
     return $GLOBALS['source_conn']->query($query);
 }
