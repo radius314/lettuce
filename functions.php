@@ -8,8 +8,8 @@ $source_table_prefix = "na_";
 $target_mysql_server = "127.0.0.1";
 $target_mysql_username = "root";
 $target_mysql_password = "bmlt_root_password";
-$target_mysql_db = "bmlt";
-$target_table_prefix = "na_";
+$target_mysql_db = "target";
+$target_table_prefix = "sezf1_";
 
 $source_conn = new mysqli($source_mysql_server, $source_mysql_username, $source_mysql_password, $source_mysql_db);
 if ($source_conn->connect_error) {
@@ -79,7 +79,7 @@ function getSourceTableCounts($table_suffix) {
 }
 
 function getTargetTableCounts($table_suffix) {
-    return intval(executeTargetScalarValue('SELECT count(*) AS count_size FROM ' . $GLOBALS['source_table_prefix'] . 'comdef_' . $table_suffix)->count_size);
+    return intval(executeTargetScalarValue('SELECT count(*) AS count_size FROM ' . $GLOBALS['target_table_prefix'] . 'comdef_' . $table_suffix)->count_size);
 }
 
 function executeTargetScalarValue($query) {
@@ -133,12 +133,14 @@ function getNewFormats($formats) {
     $formats_array = explode(",", $formats);
     $new_formats_array = array();
     foreach ($formats_array as $format_item) {
-        $format_lookup_sql = "SELECT new_id FROM lettuce_merge_formats WHERE old_id = " . $format_item;
-        $response = executeSourceDbQuery($format_lookup_sql);
-        if ($response->num_rows > 0) {
-            // output data of each row
-            while ( $r = $response->fetch_assoc() ) {
-                array_push($new_formats_array, $r["new_id"]);
+        if (strlen($format_item) > 0) {
+            $format_lookup_sql = "SELECT new_id FROM lettuce_merge_formats WHERE old_id = " . $format_item;
+            $response          = executeSourceDbQuery( $format_lookup_sql );
+            if ( $response->num_rows > 0 ) {
+                // output data of each row
+                while ( $r = $response->fetch_assoc() ) {
+                    array_push( $new_formats_array, $r["new_id"] );
+                }
             }
         }
     }

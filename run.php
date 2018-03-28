@@ -15,13 +15,13 @@ if ($result->num_rows > 0) {
         $insert_sql = "INSERT INTO " . $target_table_prefix . "comdef_" . $table_suffix . " VALUES (" .
                       ($r["id_bigint"] + $users_max_id) . "," .
                       $r["user_level_tinyint"] . "," .
-                      "'" . $r["name_string"] . "'," .
-                      "'" . $r["description_string"] . "'," .
-                      "'" . $r["email_address_string"] . "'," .
-                      "'" . $r["login_string"] . "'," .
-                      "'" . $r["password_string"] . "'," .
-                      "'" . $r["last_access_datetime"] . "'," .
-                      "'" . $r["lang_enum"] . "')";
+                      "'" . $GLOBALS['target_conn']->escape_string($r["name_string"]) . "'," .
+                      "'" . $GLOBALS['target_conn']->escape_string($r["description_string"]) . "'," .
+                      "'" . $GLOBALS['target_conn']->escape_string($r["email_address_string"]) . "'," .
+                      "'" . $GLOBALS['target_conn']->escape_string($r["login_string"]) . "'," .
+                      "'" . $GLOBALS['target_conn']->escape_string($r["password_string"]) . "'," .
+                      "'" . $GLOBALS['target_conn']->escape_string($r["last_access_datetime"]) . "'," .
+                      "'" . $GLOBALS['target_conn']->escape_string($r["lang_enum"]) . "')";
         $insert_result = executeTargetDbQuery($insert_sql);
     }
 } else {
@@ -48,18 +48,18 @@ if ($result->num_rows > 0) {
     while($r = $result->fetch_assoc()) {
         $insert_sql = "INSERT INTO " . $target_table_prefix . "comdef_" . $table_suffix . " VALUES (" .
                       ($r["id_bigint"] + $service_bodies_max_id) . "," .
-                      "'" . $r["name_string"] . "'," .
-                      "'" . $r["description_string"] . "'," .
+                      "'" . $GLOBALS['target_conn']->escape_string($r["name_string"]) . "'," .
+                      "'" . $GLOBALS['target_conn']->escape_string($r["description_string"]) . "'," .
                       "'" . $r["lang_enum"] . "'," .
-                      "'" . $r["worldid_mixed"] . "'," .
-                      "'" . $r["kml_file_uri_string"] . "'," .
+                      "'" . $GLOBALS['target_conn']->escape_string($r["worldid_mixed"]) . "'," .
+                      "'" . $GLOBALS['target_conn']->escape_string($r["kml_file_uri_string"]) . "'," .
                       ($r["principal_user_bigint"] + $users_max_id) . "," .
                       "'" . getNewUsers($r["editors_string"], $users_max_id) . "'," .
-                      "'" . $r["uri_string"] . "'," .
-                      "'" . $r["sb_type"] . "'," .
+                      "'" . $GLOBALS['target_conn']->escape_string($r["uri_string"]) . "'," .
+                      "'" . $GLOBALS['target_conn']->escape_string($r["sb_type"]) . "'," .
                       ($r["sb_owner"] > 0 ? $r["sb_owner"] + $service_bodies_max_id : $new_top_level_id) . "," .
                       $r["sb_owner_2"] . "," .
-                      "'" . $r["sb_meeting_email"] . "')";
+                      "'" . $GLOBALS['target_conn']->escape_string($r["sb_meeting_email"]) . "')";
         $insert_result = executeTargetDbQuery($insert_sql);
     }
 } else {
@@ -135,7 +135,7 @@ if ($results->num_rows > 0) {
                       $r["longitude"] . "," .
                       $r["latitude"] . "," .
                       $r["published"] . "," .
-                      "'" . $r["email_contact"] . "')";
+                      "'" . $GLOBALS['target_conn']->escape_string($r["email_contact"]) . "')";
         $insert_result = executeTargetDbQuery($insert_sql);
     }
 } else {
@@ -164,7 +164,7 @@ if ($result->num_rows > 0) {
                       "'" . $r["key"] . "'," .
                       "'" . $r["field_prompt"] . "'," .
                       "'" . $r["lang_enum"] . "'," .
-                      $r["visibility"] . "," .
+                      (is_null($r["visibility"]) ? 0 : $r["visibility"]) . "," .
                       "'" . $GLOBALS['target_conn']->escape_string($r["data_string"]) . "'," .
                       "NULL,NULL)";
         $insert_result = executeTargetDbQuery($insert_sql);
@@ -184,7 +184,7 @@ if ($final_count == ($source_count + $target_count)) {
 ###data checks
 $server_admin_count = executeTargetScalarValue('SELECT count(id_bigint) as admin_counts FROM ' . $target_table_prefix . 'comdef_users WHERE user_level_tinyint = 1;');
 if ($server_admin_count->admin_counts > 1) {
-    error_log("Too many (" . $server_admin_count->admin_counts . ") server admin accounts.  You should delete one: SELECT * FROM " . $target_table_prefix . 'comdef_users WHERE user_level_tinyint = 1;');
+    error_log("Too many (" . $server_admin_count->admin_counts . ") server admin accounts.  You should probably rename the newer one and make it the service body administrator (user_level_tinyint = 2): SELECT * FROM " . $target_table_prefix . 'comdef_users WHERE user_level_tinyint = 1;');
 } else {
     error_log("Server Admins check is good.");
 }
