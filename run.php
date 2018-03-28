@@ -20,7 +20,7 @@ if ($result->num_rows > 0) {
                       "'" . $r["password_string"] . "'," .
                       "'" . $r["last_access_datetime"] . "'," .
                       "'" . $r["lang_enum"] . "')";
-        $insert_result = $GLOBALS['target_conn']->query($insert_sql);
+        $insert_result = executeTargetDbQuery($insert_sql);
     }
 } else {
     echo "0 results";
@@ -48,7 +48,7 @@ if ($result->num_rows > 0) {
                       ($r["sb_owner"] + $service_bodies_max_id) . "," .
                       $r["sb_owner_2"] . "," .
                       "'" . $r["sb_meeting_email"] . "')";
-        $insert_result = $GLOBALS['target_conn']->query($insert_sql);
+        $insert_result = executeTargetDbQuery($insert_sql);
     }
 } else {
     echo "0 results";
@@ -79,7 +79,7 @@ if ($source_formats->num_rows > 0) {
                           "'" . $r["name_string"] . "'," .
                           "'" . $r["description_string"] . "'," .
                           "'" . $r["format_type_enum"] . "')";
-            $insert_result = $GLOBALS['target_conn']->query($insert_sql);
+            $insert_result = executeTargetDbQuery($insert_sql);
         }
 
         if ($r["lang_enum"] == "en") {
@@ -113,7 +113,7 @@ if ($results->num_rows > 0) {
                       $r["latitude"] . "," .
                       $r["published"] . "," .
                       "'" . $r["email_contact"] . "')";
-        $insert_result = $GLOBALS['target_conn']->query($insert_sql);
+        $insert_result = executeTargetDbQuery($insert_sql);
     }
 } else {
     echo "0 results";
@@ -134,7 +134,7 @@ if ($result->num_rows > 0) {
                       $r["visibility"] . "," .
                       "'" . $r["data_string"] . "'," .
                       "NULL,NULL)";
-        $insert_result = $GLOBALS['target_conn']->query($insert_sql);
+        $insert_result = executeTargetDbQuery($insert_sql);
     }
 } else {
     echo "0 results";
