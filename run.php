@@ -41,6 +41,7 @@ $service_bodies_max_id = getTargetMaxId($table_suffix, 'id_bigint');
 $result = getAllSourceData($table_suffix);
 $source_count = getSourceTableCounts($table_suffix);
 $target_count = getTargetTableCounts($table_suffix);
+$new_top_level_id = executeTargetScalarValue('SELECT id_bigint FROM ' . $target_table_prefix . 'comdef_' . $table_suffix . ' WHERE sb_owner = 0')->id_bigint;
 
 if ($result->num_rows > 0) {
     // output data of each row
@@ -56,7 +57,7 @@ if ($result->num_rows > 0) {
                       "'" . getNewUsers($r["editors_string"], $users_max_id) . "'," .
                       "'" . $r["uri_string"] . "'," .
                       "'" . $r["sb_type"] . "'," .
-                      ($r["sb_owner"] > 0 ? $r["sb_owner"] + $service_bodies_max_id : 0) . "," .
+                      ($r["sb_owner"] > 0 ? $r["sb_owner"] + $service_bodies_max_id : $new_top_level_id) . "," .
                       $r["sb_owner_2"] . "," .
                       "'" . $r["sb_meeting_email"] . "')";
         $insert_result = executeTargetDbQuery($insert_sql);
