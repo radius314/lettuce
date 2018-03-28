@@ -42,10 +42,10 @@ if ($result->num_rows > 0) {
                       "'" . $r["worldid_mixed"] . "'," .
                       "'" . $r["kml_file_uri_string"] . "'," .
                       ($r["principal_user_bigint"] + $users_max_id) . "," .
-                      "'" . $r["editors_string"] . "'," .
+                      "'" . getNewUsers($r["editors_string"], $users_max_id) . "'," .
                       "'" . $r["uri_string"] . "'," .
                       "'" . $r["sb_type"] . "'," .
-                      ($r["sb_owner"] + $service_bodies_max_id) . "," .
+                      ($r["sb_owner"] > 0 ? $r["sb_owner"] + $service_bodies_max_id : 0) . "," .
                       $r["sb_owner_2"] . "," .
                       "'" . $r["sb_meeting_email"] . "')";
         $insert_result = executeTargetDbQuery($insert_sql);

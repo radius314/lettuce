@@ -111,3 +111,16 @@ function getNewFormats($formats) {
 
     return implode(",", $new_formats_array);
 }
+
+function getNewUsers($users, $users_max_id) {
+    if (strlen($users) == 0) {
+        return "";
+    }
+    $users_array = explode(",", $users);
+    $new_users_array = array();
+    foreach ($users_array as $users_item) {
+        array_push($new_users_array, $users_item + $users_max_id);
+    }
+
+    return implode(",", $new_users_array);
+}
