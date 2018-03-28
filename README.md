@@ -1,12 +1,14 @@
 # lettuce
 
 ### Important Information
-____
+
 1. Think about your desired service body tree.  If collapsing into a zone, make those changes ahead of time on the target.
 2. Always take backups.
 3. There might some additional actions to take of, look at the console messages.
 4. If you have some custom fields, you will need to add them in the target database first before exporting the dump.
 5. Once you are done with your exported merged results, open the .sql file and rename `na_` to something else.  This will allow you to have side-by-side migration capabilities.   You can then modify the `config.inc.php` file setting `$dbPrefix` and swap in the new prefix when you are ready.  If you need to rollback you can then switch to the older one. 
+
+____
 
 ### How to use Lettuce
 
