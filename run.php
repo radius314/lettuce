@@ -96,8 +96,8 @@ if ($source_formats->num_rows > 0) {
                           "NULL," .
                           "'" . $r["worldid_mixed"] . "'," .
                           "'" . $r["lang_enum"] . "'," .
-                          "'" . $r["name_string"] . "'," .
-                          "'" . $r["description_string"] . "'," .
+                          "'" . $GLOBALS['target_conn']->escape_string($r["name_string"]) . "'," .
+                          "'" . $GLOBALS['target_conn']->escape_string($r["description_string"]) . "'," .
                           "'" . $r["format_type_enum"] . "')";
             $insert_result = executeTargetDbQuery($insert_sql);
         }
@@ -150,8 +150,9 @@ if ($final_count == ($source_count + $target_count)) {
 
 ###meetings data
 $table_suffix = 'meetings_data';
-$result = getAllSourceData($table_suffix);
-$source_count = getSourceTableCounts($table_suffix);
+#don't insert the data type stubs, will use the ones from the target
+$result = getAllSourceData($table_suffix . " WHERE meetingid_bigint <> 0");
+$source_count = getSourceTableCounts($table_suffix . " WHERE meetingid_bigint <> 0");
 $target_count = getTargetTableCounts($table_suffix);
 
 if ($result->num_rows > 0) {
@@ -166,6 +167,7 @@ if ($result->num_rows > 0) {
                       "'" . $GLOBALS['target_conn']->escape_string($r["data_string"]) . "'," .
                       "NULL,NULL)";
         $insert_result = executeTargetDbQuery($insert_sql);
+
     }
 } else {
     echo "0 results";

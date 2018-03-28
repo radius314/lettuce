@@ -38,7 +38,7 @@ function getTargetMaxId($table_suffix, $id_field) {
         $max_id = $row[$id_field];
     }
 
-    echo "max big int: " . $max_id . "\n\n";
+    echo $table_suffix . " max big int: " . $max_id . "\n\n";
     return $max_id;
 }
 
@@ -92,11 +92,19 @@ function executeTargetScalarValue($query) {
 }
 
 function executeSourceDbQuery($query) {
-    return $GLOBALS['source_conn']->query($query);
+    $result = $GLOBALS['source_conn']->query($query);
+    if (!$result) {
+        error_log("Failed row: " . $query);
+    }
+    return $result;
 }
 
 function executeTargetDbQuery($query) {
-    return $GLOBALS['target_conn']->query($query);
+    $result = $GLOBALS['target_conn']->query($query);
+    if (!$result) {
+        error_log("Failed row: " . $query);
+    }
+    return $result;
 }
 
 function formatExists($target_formats, $format_data) {
