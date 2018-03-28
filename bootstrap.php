@@ -11,6 +11,6 @@ $data = "<?php\n" .
         "executeTargetDbQuery(\"DELETE FROM " . $GLOBALS['target_table_prefix'] . "comdef_service_bodies where id_bigint > " . $service_bodies_max_id . "\");\n" .
         "executeTargetDbQuery(\"DELETE FROM " . $GLOBALS['target_table_prefix'] . "comdef_formats where id_bigint > " . $formats_max_id . "\");\n" .
         "executeTargetDbQuery(\"DELETE FROM " . $GLOBALS['target_table_prefix'] . "comdef_meetings_main where id_bigint > " . $meetings_main_max_id . "\");\n" .
-        "executeTargetDbQuery(\"DELETE FROM " . $GLOBALS['target_table_prefix'] . "comdef_meetings_data where id_bigint > " . $meetings_main_max_id . "\");\n";
+        "executeTargetDbQuery(\"DELETE FROM " . $GLOBALS['target_table_prefix'] . "comdef_meetings_data where meetingid_bigint > " . $meetings_main_max_id . "\");\n";
 
 file_put_contents ( 'clean.php', $data);

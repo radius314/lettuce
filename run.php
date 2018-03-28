@@ -132,7 +132,7 @@ if ($result->num_rows > 0) {
                       "'" . $r["field_prompt"] . "'," .
                       "'" . $r["lang_enum"] . "'," .
                       $r["visibility"] . "," .
-                      "'" . $r["data_string"] . "'," .
+                      "'" . $GLOBALS['target_conn']->escape_string($r["data_string"]) . "'," .
                       "NULL,NULL)";
         $insert_result = executeTargetDbQuery($insert_sql);
     }
