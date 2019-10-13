@@ -3,21 +3,23 @@ $source_mysql_server = "127.0.0.1";
 $source_mysql_username = "root";
 $source_mysql_password = "bmlt_root_password";
 $source_mysql_db = "source";
+$source_mysql_port = 3306;
 $source_table_prefix = "na_";
 
 $target_mysql_server = "127.0.0.1";
 $target_mysql_username = "root";
 $target_mysql_password = "bmlt_root_password";
 $target_mysql_db = "target";
+$target_mysql_port = 3306;
 $target_table_prefix = "sezf1_";
 
-$source_conn = new mysqli($source_mysql_server, $source_mysql_username, $source_mysql_password, $source_mysql_db);
+$source_conn = new mysqli($source_mysql_server, $source_mysql_username, $source_mysql_password, $source_mysql_db, $source_mysql_port);
 if ($source_conn->connect_error) {
     die("Source connection failed: " . $source_conn->connect_error);
 }
 echo "Source database connection established.\n";
 
-$target_conn = new mysqli($target_mysql_server, $target_mysql_username, $target_mysql_password, $target_mysql_db);
+$target_conn = new mysqli($target_mysql_server, $target_mysql_username, $target_mysql_password, $target_mysql_db, $target_mysql_port);
 if ($target_conn->connect_error) {
     die("Target connection failed: " . $target_conn->connect_error);
 }
