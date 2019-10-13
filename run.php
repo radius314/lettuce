@@ -21,7 +21,8 @@ if ($result->num_rows > 0) {
                       "'" . $GLOBALS['target_conn']->escape_string($r["login_string"]) . "'," .
                       "'" . $GLOBALS['target_conn']->escape_string($r["password_string"]) . "'," .
                       "'" . $GLOBALS['target_conn']->escape_string($r["last_access_datetime"]) . "'," .
-                      "'" . $GLOBALS['target_conn']->escape_string($r["lang_enum"]) . "')";
+                      "'" . $GLOBALS['target_conn']->escape_string($r["lang_enum"]) . "'," .
+                      "'" . $GLOBALS['target_conn']->escape_string($r["owner_id_bigint"]) . "')";
         $insert_result = executeTargetDbQuery($insert_sql);
     }
 } else {
