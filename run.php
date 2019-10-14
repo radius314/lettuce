@@ -175,6 +175,31 @@ if ($result->num_rows > 0) {
     echo "0 results";
 }
 
+###meetings data
+$table_suffix = 'meetings_longdata';
+#don't insert the data type stubs, will use the ones from the target
+$result = getAllSourceData($table_suffix . " WHERE meetingid_bigint <> 0");
+$source_count = getSourceTableCounts($table_suffix . " WHERE meetingid_bigint <> 0");
+$target_count = getTargetTableCounts($table_suffix);
+
+if ($result->num_rows > 0) {
+    // output data of each row
+    while($r = $result->fetch_assoc()) {
+        $insert_sql = "INSERT INTO " . $target_table_prefix . "comdef_" . $table_suffix . " VALUES (" .
+            ($r["meetingid_bigint"] + $meetings_main_max_id) . "," .
+            "'" . $r["key"] . "'," .
+            "'" . $r["field_prompt"] . "'," .
+            "'" . $r["lang_enum"] . "'," .
+            (is_null($r["visibility"]) ? 0 : $r["visibility"]) . "," .
+            "'" . $GLOBALS['target_conn']->escape_string($r["data_longtext"]) . "'," .
+            "'" . $GLOBALS['target_conn']->escape_string($r["data_blob"]) . "')";
+        $insert_result = executeTargetDbQuery($insert_sql);
+
+    }
+} else {
+    echo "0 results";
+}
+
 $final_count = getTargetTableCounts($table_suffix);
 if ($final_count == ($source_count + $target_count)) {
     error_log($table_suffix . ' table all imported.');
