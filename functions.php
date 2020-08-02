@@ -1,4 +1,5 @@
 <?php
+include('format.php');
 $source_mysql_server = "127.0.0.1";
 $source_mysql_username = "root";
 $source_mysql_password = "bmlt_root_password";
@@ -32,7 +33,7 @@ function closeConnections() {
     echo 'Target database connection closed.';
 }
 
-function getTargetMaxId($table_suffix, $id_field) {
+function getTargetMaxId($table_suffix, $id_field, $print=true) {
     $max_id = 0;
     $result = executeTargetDbQuery("SELECT " . $id_field . " FROM " . $GLOBALS['target_table_prefix']
                                              . "comdef_" . $table_suffix . " ORDER BY " . $id_field . " DESC LIMIT 1");
@@ -40,31 +41,14 @@ function getTargetMaxId($table_suffix, $id_field) {
         $max_id = $row[$id_field];
     }
 
-    echo $table_suffix . " max big int: " . $max_id . "\n\n";
+    if ($print) {
+        echo $table_suffix . " max big int: " . $max_id . "\n\n";
+    }
     return $max_id;
 }
 
 function getAllSourceData($table_suffix) {
     return executeSourceDbQuery("SELECT * FROM " . $GLOBALS['source_table_prefix'] . "comdef_" . $table_suffix);
-}
-
-function getAllTargetData($table_suffix) {
-    return executeTargetDbQuery("SELECT * FROM " . $GLOBALS['target_table_prefix'] . "comdef_" . $table_suffix);
-}
-
-function resetMergeTable($table_suffix) {
-    $delete_table_sql = "DROP TABLE lettuce_merge_" . $table_suffix;
-    executeSourceDbQuery($delete_table_sql);
-}
-
-function createMergeTable($table_suffix) {
-    $create_table_sql = "CREATE TABLE lettuce_merge_" . $table_suffix . " (old_id bigint, new_id bigint, notes varchar(255))";
-    executeSourceDbQuery($create_table_sql);
-}
-
-function insertIntoMergeTable($table_suffix, $old_id, $new_id, $notes) {
-    $merge_insert = "INSERT INTO lettuce_merge_" . $table_suffix . " VALUES (" . $old_id . "," . $new_id . ",'". $notes . "')";
-    executeSourceDbQuery($merge_insert);
 }
 
 function executeSourceScalarValue($query) {
@@ -109,47 +93,6 @@ function executeTargetDbQuery($query) {
     return $result;
 }
 
-function formatExists($target_formats, $format_data) {
-    $target_formats->data_seek(0);
-    if ($target_formats->num_rows > 0) {
-        // output data of each row
-        while ( $r = $target_formats->fetch_assoc() ) {
-            if ($format_data['key_string'] == $r['key_string'] &&
-                $format_data['worldid_mixed'] == $r['worldid_mixed'] &&
-                $format_data['lang_enum'] == $r['lang_enum'] &&
-                $format_data['name_string'] == $r['name_string'] &&
-                $format_data['description_string'] == $r['description_string'] &&
-                $format_data['format_type_enum'] == $r['format_type_enum']) {
-                return $r['shared_id_bigint'];
-            }
-        }
-
-        return 0;
-    }
-}
-
-function getNewFormats($formats) {
-    if (strlen($formats) == 0) {
-        return "";
-    }
-    $formats_array = explode(",", $formats);
-    $new_formats_array = array();
-    foreach ($formats_array as $format_item) {
-        if (strlen($format_item) > 0) {
-            $format_lookup_sql = "SELECT new_id FROM lettuce_merge_formats WHERE old_id = " . $format_item;
-            $response          = executeSourceDbQuery( $format_lookup_sql );
-            if ( $response->num_rows > 0 ) {
-                // output data of each row
-                while ( $r = $response->fetch_assoc() ) {
-                    array_push( $new_formats_array, $r["new_id"] );
-                }
-            }
-        }
-    }
-
-    return implode(",", $new_formats_array);
-}
-
 function getNewUsers($users, $users_max_id) {
     if (strlen($users) == 0) {
         return "";
@@ -161,4 +104,57 @@ function getNewUsers($users, $users_max_id) {
     }
 
     return implode(",", $new_users_array);
+}
+
+function getFormats($conn, $table_name, $lang_enum) {
+    $query  = "SELECT ";
+    $query .= "shared_id_bigint, key_string, worldid_mixed, lang_enum, name_string, description_string, format_type_enum ";
+    $query .= "FROM " . $table_name . " ";
+    $query .= "WHERE lang_enum = '" . $lang_enum . "'";
+    $result = $conn->query($query);
+    if (!$result) {
+        error_log("Failed row: " . $query);
+    }
+    $formats = array();
+    while ($r = $result->fetch_assoc()) {
+        $format = new Format(
+            $r["shared_id_bigint"],
+            $r["key_string"],
+            $r["worldid_mixed"],
+            $r["lang_enum"],
+            $r["name_string"],
+            $r["description_string"],
+            $r["format_type_enum"]
+        );
+        array_push($formats, $format);
+    }
+    return $formats;
+}
+
+function getSourceFormats($lang_enum) {
+    return getFormats($GLOBALS['source_conn'], $GLOBALS['source_table_prefix'] . "comdef_formats", $lang_enum);
+}
+
+function getTargetFormats($lang_enum) {
+    return getFormats($GLOBALS['target_conn'], $GLOBALS['target_table_prefix'] . "comdef_formats", $lang_enum);
+}
+
+function getNextTargetFormatId() {
+    $id = getTargetMaxId("formats", "shared_id_bigint", false);
+    return $id + 1;
+}
+
+function anySourceMeetingsUsingFormat($id) {
+    $table_name = $GLOBALS["source_table_prefix"] . "comdef_meetings_main";
+    $query  = "SELECT COUNT(*) as `count` FROM " . $table_name . " ";
+    $query .= "WHERE ";
+    $query .= "formats = '" . $id . "' ";
+    $query .= "OR ";
+    $query .= "formats LIKE '" . $id . ",%' ";
+    $query .= "OR ";
+    $query .= "formats LIKE '%," . $id . "' ";
+    $query .= "OR ";
+    $query .= "formats LIKE '%," . $id . ",%'";
+    $result = executeSourceScalarValue($query);
+    return (intval($result->count) > 0);
 }
