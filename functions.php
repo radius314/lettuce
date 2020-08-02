@@ -164,9 +164,9 @@ function anySourceMeetingsUsingFormat($id) {
 }
 
 function targetHasFormatIdWithLanguage($shared_id_bigint, $lang_enum) {
-    $table_name = $GLOBALS["source_table_prefix"] . "comdef_formats";
+    $table_name = $GLOBALS["target_table_prefix"] . "comdef_formats";
     $query = "SELECT COUNT(*) as `count` FROM " . $table_name . " WHERE shared_id_bigint = '". $shared_id_bigint . "' AND lang_enum = '" . $lang_enum ."'";
-    $result = executeSourceScalarValue($query);
+    $result = executeTargetScalarValue($query);
     return (intval($result->count) > 0);
 }
 
