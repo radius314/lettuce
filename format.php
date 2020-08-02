@@ -60,15 +60,16 @@ class Format {
         $table_name = $table_prefix . "comdef_formats";
         $sql  = "INSERT INTO " . $table_name . " ";
         $sql .= "(shared_id_bigint, key_string, worldid_mixed, lang_enum, name_string, description_string, format_type_enum) ";
-        $sql .= "VALUES (";
-        $sql .= "'" . strval($next_id) . "', ";
-        $sql .= "'" . strval($this->key_string) . "', ";
-        $sql .= "'" . strval($this->worldid_mixed) . "', ";
-        $sql .= "'" . strval($this->lang_enum) . "', ";
-        $sql .= "'" . strval($this->name_string) . "', ";
-        $sql .= "'" . strval($this->description_string) . "', ";
-        $sql .= "'" . strval($this->format_type_enum) . "' ";
-        $sql .= ")";
-        return $sql;
+        $sql .= "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        $params = array(
+            strval($next_id) ,
+            strval($this->key_string),
+            strval($this->worldid_mixed),
+            strval($this->lang_enum),
+            strval($this->name_string),
+            strval($this->description_string),
+            strval($this->format_type_enum)
+        );
+        return array($sql, $params);
     }
 }

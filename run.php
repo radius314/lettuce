@@ -75,75 +75,7 @@ if ($final_count == ($source_count + $target_count)) {
 }
 
 ###formats
-$table_suffix = 'formats';
-$formats_max_id = getTargetMaxId($table_suffix, 'shared_id_bigint');
-$source_formats = getSourceFormats("en");
-$target_formats = getTargetFormats("en");
-
-$oldFormatIdToNewFormatId = array();
-
-if (count($source_formats) > 0) {
-    foreach ($source_formats as $source_format) {
-        if (!anySourceMeetingsUsingFormat($source_format->shared_id_bigint)) {
-            echo "Skipping source format '" . $source_format->key_string . ":" . $source_format->shared_id_bigint . "' because it is not in use.\n";
-            continue;
-        }
-        $found_match = false;
-        if (array_key_exists($source_format->shared_id_bigint, $oldFormatIdToNewFormatId)) {
-            $existingTargetFormatId = $source_formats[$source_format->shared_id_bigint];
-            continue;
-        }
-
-        // Look for exact matches
-        foreach ($target_formats as $target_format) {
-            if ($source_format->is_exact_match($target_format)) {
-                echo "Found exact format match: source format '" . $source_format->key_string . ":" . $source_format->shared_id_bigint . "' to target format '" . $target_format->key_string . ":" . $target_format->shared_id_bigint . "'.\n";
-                $oldFormatIdToNewFormatId[$source_format->shared_id_bigint] = $target_format->shared_id_bigint;
-                $found_match = true;
-                break;
-            }
-        }
-        if ($found_match) {
-            continue;
-        }
-
-        // No exact matches, look for partial match
-        // If the source format has a format_type_enum, description_string, or worldid_mixed set and the target does not,
-        // we update the target with the source's values.
-        foreach ($target_formats as $target_format) {
-            if ($source_format->is_match($target_format)) {
-                /*
-                if ($source_format->format_type_enum && !$target_format->format_type_enum) {
-                    $target_format->format_type_enum = $source_format->format_type_enum;
-                }
-                if ($source_format->description_string && !$target_format->description_string) {
-                    $target_format->description_string = $source_format->description_string;
-                }
-                if ($source_format->worldid_mixed && !$target_format->worldid_mixed) {
-                    $target_format->worldid_mixed = $source_format->worldid_mixed;
-                }
-                */
-                echo "Found partial format match: source format '" . $source_format->key_string . ":" . $source_format->shared_id_bigint . "' to target format '" . $target_format->key_string . ":" . $target_format->shared_id_bigint . "'.\n";
-                $oldFormatIdToNewFormatId[$source_format->shared_id_bigint] = $target_format->shared_id_bigint;
-                $found_match = true;
-                break;
-            }
-        }
-        if ($found_match)  {
-            continue;
-        }
-
-        // Format doesn't exist, create a new one
-        $new_id = getNextTargetFormatId();
-        echo "No match found for source format '" . $source_format->key_string . ":" . $source_format->shared_id_bigint . "', creating target format '" . $source_format->key_string . ":" . $new_id . "'\n";
-        $insert_sql = $source_format->getInsertStatement($GLOBALS["target_table_prefix"], $new_id);
-        executeTargetDbQuery($insert_sql);
-        $oldFormatIdToNewFormatId[$source_format->shared_id_bigint] = strval($new_id);
-    }
-} else {
-    echo "Error: Source database has no formats.";
-    die();
-}
+$oldFormatIdToNewFormatId = reconcileFormats();
 
 ### meetings
 $table_suffix = 'meetings_main';
