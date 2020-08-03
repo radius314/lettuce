@@ -245,6 +245,7 @@ function getSourceLanguages() {
     }
     return $languages;
 }
+
 function reconcileFormats() {
     $languages = getSourceLanguages();
     unset($languages[array_search("en", $languages)]);
