@@ -179,10 +179,15 @@ function reconcileFormatsForLanguage($lang_enum, $mapping=null) {
     $target_formats = getTargetFormats($lang_enum);
 
     foreach ($source_formats as $source_format) {
+        // If the format isn't used at all, we don't bother importing it
         if (!anySourceMeetingsUsingFormat($source_format->shared_id_bigint)) {
             continue;
         }
+        
         $found_match = false;
+
+        // Has a previous pass already mapped this format? If so, we make sure this translation of the format exists in the target,
+        // and if it doesn't, we create it.
         if (array_key_exists($source_format->shared_id_bigint, $mapping)) {
             $existingId = $mapping[$source_format->shared_id_bigint];
             $existingId = $existingId[0]["shared_id_bigint"];
