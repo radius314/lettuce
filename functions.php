@@ -183,7 +183,7 @@ function reconcileFormatsForLanguage($lang_enum, $mapping=null) {
         if (!anySourceMeetingsUsingFormat($source_format->shared_id_bigint)) {
             continue;
         }
-        
+
         $found_match = false;
 
         // Has a previous pass already mapped this format? If so, we make sure this translation of the format exists in the target,
@@ -252,20 +252,28 @@ function getSourceLanguages() {
 }
 
 function reconcileFormats() {
+    // The idea here is to sweep through the formats for every language, but start with
+    // English, because it's the most common language for BMLT users.
     $languages = getSourceLanguages();
     unset($languages[array_search("en", $languages)]);
     $mapping = reconcileFormatsForLanguage("en");
+
+    // Hit every other translation
     foreach ($languages as $language) {
         $mapping = reconcileFormatsForLanguage($language, $mapping);
     }
-    $ret = array();
+
+    // Now we build up the mapping of old format ids to new format ids. In doing so, we execute
+    // any sql statements to perform the actual migration.
+    $oldFormatIdToNewFormatId = array();
     foreach ($mapping as $source_id => $targets) {
-        $ret[$source_id] = $targets[0]["shared_id_bigint"];
+        $oldFormatIdToNewFormatId[$source_id] = $targets[0]["shared_id_bigint"];
         foreach ($targets as $target) {
             if (array_key_exists("sql", $target)) {
                 executeTargetPreparedStatement($target["sql"][0], $target["sql"][1]);
             }
         }
     }
-    return $ret;
+
+    return $oldFormatIdToNewFormatId;
 }
