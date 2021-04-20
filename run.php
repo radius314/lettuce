@@ -131,6 +131,7 @@ if ($results->num_rows > 0) {
                       $r["weekday_tinyint"] . "," .
                       "'" . $r["start_time"] . "'," .
                       "'" . $r["duration_time"] . "'," .
+                      "'" . $r["time_zone"] . "'," .
                       "'" . $new_formats . "'," .
                       "'" . $r["lang_enum"] . "'," .
                       $r["longitude"] . "," .
