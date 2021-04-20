@@ -1,4 +1,5 @@
 <?php
+include('format.php');
 $source_mysql_server = "127.0.0.1";
 $source_mysql_username = "root";
 $source_mysql_password = "bmlt_root_password";
@@ -32,7 +33,7 @@ function closeConnections() {
     echo 'Target database connection closed.';
 }
 
-function getTargetMaxId($table_suffix, $id_field) {
+function getTargetMaxId($table_suffix, $id_field, $print=true) {
     $max_id = 0;
     $result = executeTargetDbQuery("SELECT " . $id_field . " FROM " . $GLOBALS['target_table_prefix']
                                              . "comdef_" . $table_suffix . " ORDER BY " . $id_field . " DESC LIMIT 1");
@@ -40,31 +41,14 @@ function getTargetMaxId($table_suffix, $id_field) {
         $max_id = $row[$id_field];
     }
 
-    echo $table_suffix . " max big int: " . $max_id . "\n\n";
+    if ($print) {
+        echo $table_suffix . " max big int: " . $max_id . "\n\n";
+    }
     return $max_id;
 }
 
 function getAllSourceData($table_suffix) {
     return executeSourceDbQuery("SELECT * FROM " . $GLOBALS['source_table_prefix'] . "comdef_" . $table_suffix);
-}
-
-function getAllTargetData($table_suffix) {
-    return executeTargetDbQuery("SELECT * FROM " . $GLOBALS['target_table_prefix'] . "comdef_" . $table_suffix);
-}
-
-function resetMergeTable($table_suffix) {
-    $delete_table_sql = "DROP TABLE lettuce_merge_" . $table_suffix;
-    executeSourceDbQuery($delete_table_sql);
-}
-
-function createMergeTable($table_suffix) {
-    $create_table_sql = "CREATE TABLE lettuce_merge_" . $table_suffix . " (old_id bigint, new_id bigint, notes varchar(255))";
-    executeSourceDbQuery($create_table_sql);
-}
-
-function insertIntoMergeTable($table_suffix, $old_id, $new_id, $notes) {
-    $merge_insert = "INSERT INTO lettuce_merge_" . $table_suffix . " VALUES (" . $old_id . "," . $new_id . ",'". $notes . "')";
-    executeSourceDbQuery($merge_insert);
 }
 
 function executeSourceScalarValue($query) {
@@ -109,45 +93,13 @@ function executeTargetDbQuery($query) {
     return $result;
 }
 
-function formatExists($target_formats, $format_data) {
-    $target_formats->data_seek(0);
-    if ($target_formats->num_rows > 0) {
-        // output data of each row
-        while ( $r = $target_formats->fetch_assoc() ) {
-            if ($format_data['key_string'] == $r['key_string'] &&
-                $format_data['worldid_mixed'] == $r['worldid_mixed'] &&
-                $format_data['lang_enum'] == $r['lang_enum'] &&
-                $format_data['name_string'] == $r['name_string'] &&
-                $format_data['description_string'] == $r['description_string'] &&
-                $format_data['format_type_enum'] == $r['format_type_enum']) {
-                return $r['shared_id_bigint'];
-            }
-        }
-
-        return 0;
+function executeTargetPreparedStatement($sql, $params) {
+    $stmt = $GLOBALS['target_conn']->prepare($sql);
+    $stmt->bind_param(str_repeat("s", count($params)), ...$params);
+    if (!$stmt->execute()) {
+        echo "Execute failed: (" . $stmt->errno . ") " . $stmt->error;
+        die();
     }
-}
-
-function getNewFormats($formats) {
-    if (strlen($formats) == 0) {
-        return "";
-    }
-    $formats_array = explode(",", $formats);
-    $new_formats_array = array();
-    foreach ($formats_array as $format_item) {
-        if (strlen($format_item) > 0) {
-            $format_lookup_sql = "SELECT new_id FROM lettuce_merge_formats WHERE old_id = " . $format_item;
-            $response          = executeSourceDbQuery( $format_lookup_sql );
-            if ( $response->num_rows > 0 ) {
-                // output data of each row
-                while ( $r = $response->fetch_assoc() ) {
-                    array_push( $new_formats_array, $r["new_id"] );
-                }
-            }
-        }
-    }
-
-    return implode(",", $new_formats_array);
 }
 
 function getNewUsers($users, $users_max_id) {
@@ -161,4 +113,167 @@ function getNewUsers($users, $users_max_id) {
     }
 
     return implode(",", $new_users_array);
+}
+
+function getFormats($conn, $table_name, $lang_enum) {
+    $query  = "SELECT ";
+    $query .= "shared_id_bigint, key_string, worldid_mixed, lang_enum, name_string, description_string, format_type_enum ";
+    $query .= "FROM " . $table_name . " ";
+    $query .= "WHERE lang_enum = '" . $lang_enum . "'";
+    $result = $conn->query($query);
+    if (!$result) {
+        error_log("Failed row: " . $query);
+    }
+    $formats = array();
+    while ($r = $result->fetch_assoc()) {
+        $format = new Format(
+            $r["shared_id_bigint"],
+            $r["key_string"],
+            $r["worldid_mixed"],
+            $r["lang_enum"],
+            $r["name_string"],
+            $r["description_string"],
+            $r["format_type_enum"]
+        );
+        array_push($formats, $format);
+    }
+    return $formats;
+}
+
+function getSourceFormats($lang_enum) {
+    return getFormats($GLOBALS['source_conn'], $GLOBALS['source_table_prefix'] . "comdef_formats", $lang_enum);
+}
+
+function getTargetFormats($lang_enum) {
+    return getFormats($GLOBALS['target_conn'], $GLOBALS['target_table_prefix'] . "comdef_formats", $lang_enum);
+}
+
+function anySourceMeetingsUsingFormat($id) {
+    $table_name = $GLOBALS["source_table_prefix"] . "comdef_meetings_main";
+    $query  = "SELECT COUNT(*) as `count` FROM " . $table_name . " ";
+    $query .= "WHERE ";
+    $query .= "formats = '" . $id . "' ";
+    $query .= "OR ";
+    $query .= "formats LIKE '" . $id . ",%' ";
+    $query .= "OR ";
+    $query .= "formats LIKE '%," . $id . "' ";
+    $query .= "OR ";
+    $query .= "formats LIKE '%," . $id . ",%'";
+    $result = executeSourceScalarValue($query);
+    return (intval($result->count) > 0);
+}
+
+function targetHasFormatIdWithLanguage($shared_id_bigint, $lang_enum) {
+    $table_name = $GLOBALS["target_table_prefix"] . "comdef_formats";
+    $query = "SELECT COUNT(*) as `count` FROM " . $table_name . " WHERE shared_id_bigint = '". $shared_id_bigint . "' AND lang_enum = '" . $lang_enum ."'";
+    $result = executeTargetScalarValue($query);
+    return (intval($result->count) > 0);
+}
+
+function reconcileFormatsForLanguage($lang_enum, $mapping=null) {
+    if (is_null($mapping)) {
+        $mapping = array();
+    }
+
+    $source_formats = getSourceFormats($lang_enum);
+    $target_formats = getTargetFormats($lang_enum);
+
+    foreach ($source_formats as $source_format) {
+        // If the format isn't used at all, we don't bother importing it
+        if (!anySourceMeetingsUsingFormat($source_format->shared_id_bigint)) {
+            continue;
+        }
+
+        $found_match = false;
+
+        // Has a previous pass already mapped this format? If so, we make sure this translation of the format exists in the target,
+        // and if it doesn't, we create it.
+        if (array_key_exists($source_format->shared_id_bigint, $mapping)) {
+            $existingId = $mapping[$source_format->shared_id_bigint];
+            $existingId = $existingId[0]["shared_id_bigint"];
+            if (!targetHasFormatIdWithLanguage($existingId, $lang_enum)) {
+                $insert_sql = $source_format->getInsertStatement($GLOBALS["target_table_prefix"], $existingId);
+                array_push($mapping[$source_format->shared_id_bigint], array("shared_id_bigint" => $existingId, "lang_enum" => $lang_enum, "sql" => $insert_sql));
+            }
+            continue;
+        }
+
+        // Look for exact matches
+        foreach ($target_formats as $target_format) {
+            if ($source_format->is_exact_match($target_format)) {
+                echo "Found exact format match: source format '" . $source_format->key_string . ":" . $source_format->shared_id_bigint . "' to target format '" . $target_format->key_string . ":" . $target_format->shared_id_bigint . "'.\n";
+                $mapping[$source_format->shared_id_bigint] = array(array("shared_id_bigint" => $target_format->shared_id_bigint, "lang_enum" => $lang_enum));
+                $found_match = true;
+                break;
+            }
+        }
+        if ($found_match) {
+            continue;
+        }
+
+        // No exact matches, look for partial match
+        foreach ($target_formats as $target_format) {
+            if ($source_format->is_match($target_format)) {
+                echo "Found partial format match: source format '" . $source_format->key_string . ":" . $source_format->shared_id_bigint . "' to target format '" . $target_format->key_string . ":" . $target_format->shared_id_bigint . "'.\n";
+                $mapping[$source_format->shared_id_bigint] = array(array("shared_id_bigint" => $target_format->shared_id_bigint, "lang_enum" => $lang_enum));
+                $found_match = true;
+                break;
+            }
+        }
+        if ($found_match)  {
+            continue;
+        }
+
+        // Format doesn't exist, create a new one
+        $max_id = 0;
+        foreach ($target_formats as $target_format) {
+            if ($target_format->shared_id_bigint > $max_id) {
+                $max_id = $target_format->shared_id_bigint;
+            }
+        }
+        $new_id = $max_id + 1;
+        echo "No match found for source format '" . $source_format->key_string . ":" . $source_format->shared_id_bigint . "', creating target format '" . $source_format->key_string . ":" . $new_id . "'\n";
+        $insert_sql = $source_format->getInsertStatement($GLOBALS["target_table_prefix"], $new_id);
+        $mapping[$source_format->shared_id_bigint] = array(array("shared_id_bigint" => strval($new_id), "lang_enum" => $lang_enum, "sql" => $insert_sql));
+    }
+
+    return $mapping;
+}
+
+function getSourceLanguages() {
+    $table_name = $GLOBALS["source_table_prefix"] . "comdef_formats";
+    $sql = "SELECT DISTINCT lang_enum FROM " . $table_name;
+    $result = executeSourceDbQuery($sql);
+    $languages = array();
+    while ($r = $result->fetch_assoc()) {
+        array_push($languages, $r["lang_enum"]);
+    }
+    return $languages;
+}
+
+function reconcileFormats() {
+    // The idea here is to sweep through the formats for every language, but start with
+    // English, because it's the most common language for BMLT users.
+    $languages = getSourceLanguages();
+    unset($languages[array_search("en", $languages)]);
+    $mapping = reconcileFormatsForLanguage("en");
+
+    // Hit every other translation
+    foreach ($languages as $language) {
+        $mapping = reconcileFormatsForLanguage($language, $mapping);
+    }
+
+    // Now we build up the mapping of old format ids to new format ids. In doing so, we execute
+    // any sql statements to perform the actual migration.
+    $oldFormatIdToNewFormatId = array();
+    foreach ($mapping as $source_id => $targets) {
+        $oldFormatIdToNewFormatId[$source_id] = $targets[0]["shared_id_bigint"];
+        foreach ($targets as $target) {
+            if (array_key_exists("sql", $target)) {
+                executeTargetPreparedStatement($target["sql"][0], $target["sql"][1]);
+            }
+        }
+    }
+
+    return $oldFormatIdToNewFormatId;
 }

@@ -75,42 +75,7 @@ if ($final_count == ($source_count + $target_count)) {
 }
 
 ###formats
-$table_suffix = 'formats';
-resetMergeTable($table_suffix);
-$formats_max_id = getTargetMaxId($table_suffix, 'shared_id_bigint');
-$source_formats = getAllSourceData($table_suffix);
-$target_formats = getAllTargetData($table_suffix);
-$source_count = getSourceTableCounts($table_suffix);
-$target_count = getTargetTableCounts($table_suffix);
-createMergeTable($table_suffix);
-
-if ($source_formats->num_rows > 0) {
-    // output data of each row
-    while ( $r = $source_formats->fetch_assoc() ) {
-        $formatId = formatExists($target_formats, $r);
-        $notes = "exact match";
-        if ($formatId == 0) {
-            $notes = "unique format";
-            $formatId = $r["shared_id_bigint"] + $formats_max_id;
-            $insert_sql = "INSERT INTO " . $target_table_prefix . "comdef_" . $table_suffix . " VALUES (" .
-                          ($r["shared_id_bigint"] + $formats_max_id) . "," .
-                          "'" . $r["key_string"] . "'," .
-                          "NULL," .
-                          "'" . $r["worldid_mixed"] . "'," .
-                          "'" . $r["lang_enum"] . "'," .
-                          "'" . $GLOBALS['target_conn']->escape_string($r["name_string"]) . "'," .
-                          "'" . $GLOBALS['target_conn']->escape_string($r["description_string"]) . "'," .
-                          "'" . $r["format_type_enum"] . "')";
-            $insert_result = executeTargetDbQuery($insert_sql);
-        }
-
-        if ($r["lang_enum"] == "en") {
-            insertIntoMergeTable($table_suffix, $r['shared_id_bigint'], $formatId, $notes);
-        }
-    }
-} else {
-    echo "0 results";
-}
+$oldFormatIdToNewFormatId = reconcileFormats();
 
 ### meetings
 $table_suffix = 'meetings_main';
@@ -122,7 +87,19 @@ $target_count = getTargetTableCounts($table_suffix);
 if ($results->num_rows > 0) {
     // output data of each row
     while($r = $results->fetch_assoc()) {
-        $new_formats = getNewFormats($r["formats"]);
+        $new_formats = array();
+        if ($r["formats"]) {
+            $old_formats = explode(",", $r["formats"]);
+            foreach ($old_formats as $format_id) {
+                if (!array_key_exists($format_id, $oldFormatIdToNewFormatId)) {
+                    echo "Error: Unknown format found";
+                    die();
+                }
+                $new_format_id = $oldFormatIdToNewFormatId[$format_id];
+                array_push($new_formats, $new_format_id);
+            }
+        }
+        $new_formats = implode(",", $new_formats);
         $insert_sql = "INSERT INTO " . $target_table_prefix . "comdef_" . $table_suffix . " VALUES (" .
                       ($r["id_bigint"] + $meetings_main_max_id) . "," .
                       "'" . $r["worldid_mixed"] . "'," .
